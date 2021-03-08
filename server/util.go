@@ -1,4 +1,4 @@
-package provider
+package server
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"gold-rush/models"
 )
 
-func (p *Provider) doRequest(method, url string, input interface{}) ([]byte, error) {
+func (s *GoldRushServer) doRequest(method, url string, input interface{}) ([]byte, error) {
 	reqBody, err := createRequestBody(input)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func (p *Provider) doRequest(method, url string, input interface{}) ([]byte, err
 		return nil, err
 	}
 
-	resp, err := p.client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,12 @@
 package app
 
 import (
-	"gold-rush/models"
 	"log"
+	"net/http"
+	"time"
+
+	"gold-rush/models"
+	"gold-rush/server"
 )
 
 const (
@@ -13,12 +17,16 @@ const (
 )
 
 type App struct {
-	provider provider
+	provider goldRushServer
 }
 
-func New(provider provider) *App {
+func New() *App {
 	return &App{
-		provider: provider,
+		provider: server.GoldRushServer{
+			client: &http.Client{
+				Timeout: 5 * time.Second,
+			}
+		},
 	}
 }
 

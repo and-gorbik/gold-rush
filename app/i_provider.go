@@ -4,7 +4,7 @@ import (
 	"gold-rush/models"
 )
 
-type provider interface {
+type goldRushServer interface {
 	HealthCheck() error
 	GetBalance() (models.Balance, error)
 	GetLicenses() ([]models.License, error)

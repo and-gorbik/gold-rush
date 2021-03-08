@@ -1,4 +1,4 @@
-package provider
+package server
 
 import (
 	"net/http"
@@ -13,6 +13,6 @@ const (
 	cashURL        = "/cash"
 )
 
-type Provider struct {
+type GoldRushServer struct {
 	client *http.Client
 }
