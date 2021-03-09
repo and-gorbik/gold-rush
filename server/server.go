@@ -14,5 +14,10 @@ const (
 )
 
 type GoldRushServer struct {
-	client *http.Client
+	ExploreClient *http.Client
+	DigClient     *http.Client
+	CashClient    *http.Client
+	LicenseClient *http.Client
+	BalanceClient *http.Client
+	StatusClient  *http.Client
 }

@@ -11,7 +11,7 @@ import (
 	"gold-rush/models"
 )
 
-func (s *GoldRushServer) doRequest(method, url string, input interface{}) ([]byte, error) {
+func doRequest(client *http.Client, method, url string, input interface{}) ([]byte, error) {
 	reqBody, err := createRequestBody(input)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func (s *GoldRushServer) doRequest(method, url string, input interface{}) ([]byt
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}

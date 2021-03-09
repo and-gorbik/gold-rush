@@ -10,7 +10,7 @@ import (
 )
 
 func (s *GoldRushServer) HealthCheck() (err error) {
-	body, err := s.doRequest(http.MethodGet, healthCheckURL, nil)
+	body, err := doRequest(s.StatusClient, http.MethodGet, healthCheckURL, nil)
 	if err != nil {
 		return
 	}
@@ -25,7 +25,7 @@ func (s *GoldRushServer) HealthCheck() (err error) {
 }
 
 func (s *GoldRushServer) GetBalance() (balance models.Balance, err error) {
-	body, err := s.doRequest(http.MethodGet, balanceURL, nil)
+	body, err := doRequest(s.BalanceClient, http.MethodGet, balanceURL, nil)
 	if err != nil {
 		return
 	}
@@ -35,7 +35,7 @@ func (s *GoldRushServer) GetBalance() (balance models.Balance, err error) {
 }
 
 func (s *GoldRushServer) GetLicenses() (licenses []models.License, err error) {
-	body, err := s.doRequest(http.MethodGet, licensesURL, nil)
+	body, err := doRequest(s.LicenseClient, http.MethodGet, licensesURL, nil)
 	if err != nil {
 		return
 	}
@@ -45,7 +45,7 @@ func (s *GoldRushServer) GetLicenses() (licenses []models.License, err error) {
 }
 
 func (s *GoldRushServer) BuyLicense(payment models.PaymentForLicense) (license models.License, err error) {
-	body, err := s.doRequest(http.MethodPost, licensesURL, payment)
+	body, err := doRequest(s.LicenseClient, http.MethodPost, licensesURL, payment)
 	if err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func (s *GoldRushServer) BuyLicense(payment models.PaymentForLicense) (license m
 }
 
 func (s *GoldRushServer) Explore(area models.Area) (explored models.ExploredArea, err error) {
-	body, err := s.doRequest(http.MethodPost, exploreURL, area)
+	body, err := doRequest(s.ExploreClient, http.MethodPost, exploreURL, area)
 	if err != nil {
 		return
 	}
@@ -65,7 +65,7 @@ func (s *GoldRushServer) Explore(area models.Area) (explored models.ExploredArea
 }
 
 func (s *GoldRushServer) Dig(params models.DigParams) (tl models.TreasuresList, err error) {
-	body, err := s.doRequest(http.MethodPost, digURL, params)
+	body, err := doRequest(s.DigClient, http.MethodPost, digURL, params)
 	if err != nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (s *GoldRushServer) Dig(params models.DigParams) (tl models.TreasuresList, 
 }
 
 func (s *GoldRushServer) ExchangeTreasure(treasure models.Treasure) (pft models.PaymentForTreasure, err error) {
-	body, err := s.doRequest(http.MethodPost, cashURL, treasure)
+	body, err := doRequest(s.CashClient, http.MethodPost, cashURL, treasure)
 	if err != nil {
 		return
 	}
