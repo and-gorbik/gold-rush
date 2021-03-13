@@ -15,13 +15,17 @@ type Point struct {
 type AreaQueue struct {
 	pq   priorityQueue
 	len  int
-	mx   sync.Mutex
-	cond sync.Cond
+	mx   *sync.Mutex
+	cond *sync.Cond
 }
 
 func NewAreaQueue() *AreaQueue {
+	mx := new(sync.Mutex)
+
 	a := &AreaQueue{
-		pq: make(priorityQueue, areasCount),
+		pq:   make(priorityQueue, 0),
+		mx:   mx,
+		cond: sync.NewCond(mx),
 	}
 
 	heap.Init(&a.pq)
@@ -29,31 +33,29 @@ func NewAreaQueue() *AreaQueue {
 	return a
 }
 
-func (a *AreaQueue) Push(elem models.ExploredArea) {
+func (a *AreaQueue) Push(ea models.ExploredArea) {
+	a.mx.Lock()
+	defer a.mx.Unlock()
+
 	if a.len == 0 {
-		a.cond.L.Lock()
 		a.cond.Broadcast()
-		a.cond.L.Unlock()
 	}
 
-	a.mx.Lock()
-	heap.Push(&a.pq, elem)
+	heap.Push(&a.pq, &queueItem{ExploredArea: ea})
 	a.len++
-	a.mx.Unlock()
 }
 
 func (a *AreaQueue) Pop() models.ExploredArea {
-	if a.len == 0 {
-		a.cond.L.Lock()
-		a.cond.Wait()
-		a.cond.L.Unlock()
-	}
-
 	a.mx.Lock()
 	defer a.mx.Unlock()
+
+	if a.len == 0 {
+		a.cond.Wait()
+	}
+
 	a.len--
 
-	return heap.Pop(&a.pq).(models.ExploredArea)
+	return heap.Pop(&a.pq).(*queueItem).ExploredArea
 }
 
 // очередь с приоритетом

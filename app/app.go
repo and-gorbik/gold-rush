@@ -57,13 +57,13 @@ func (a *App) explore(workers int) *AreaQueue {
 
 	go func() {
 		for i := 0; i < areasCount; i++ {
+			points <- Point{X: posX, Y: posY}
+
 			if posX >= maxArea {
 				posX, posY = 0, posY+areaSize
 			} else {
 				posX = posX + areaSize
 			}
-
-			points <- Point{X: posX, Y: posY}
 		}
 
 		close(points)
