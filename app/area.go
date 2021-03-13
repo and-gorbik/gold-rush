@@ -58,6 +58,13 @@ func (a *AreaQueue) Pop() models.ExploredArea {
 	return heap.Pop(&a.pq).(*queueItem).ExploredArea
 }
 
+func (a *AreaQueue) Length() int {
+	a.mx.Lock()
+	defer a.mx.Unlock()
+
+	return a.len
+}
+
 // очередь с приоритетом
 type priorityQueue []*queueItem
 

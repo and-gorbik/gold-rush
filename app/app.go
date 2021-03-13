@@ -56,6 +56,8 @@ func (a *App) explore(workers int) *AreaQueue {
 	points := make(chan Point, areasCount)
 
 	go func() {
+		defer close(points)
+
 		for i := 0; i < areasCount; i++ {
 			points <- Point{X: posX, Y: posY}
 
@@ -65,11 +67,9 @@ func (a *App) explore(workers int) *AreaQueue {
 				posX = posX + areaSize
 			}
 		}
-
-		close(points)
 	}()
 
-	queue := new(AreaQueue)
+	queue := NewAreaQueue()
 
 	for i := 0; i < workers; i++ {
 		go a.explorer(points, queue)
