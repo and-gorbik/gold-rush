@@ -1,6 +1,7 @@
 package explorers
 
 import (
+	"log"
 	"runtime"
 	"testing"
 	"time"
@@ -14,17 +15,24 @@ import (
 func Test_PushPop_Concurrently(t *testing.T) {
 	maxArea := 3500
 	areaSize := 70
-	areasCount := maxArea * maxArea / areaSize / areaSize
+	areasCount := 2500
 
 	q := pushAllConcurrently(testmocks.ExploredAreasGenerator(maxArea, areaSize))
 
-	counter := 0
-	for i := 0; i < areasCount; i++ {
-		q.PopOrWait()
-		counter++
+	popConcurrently := func() {
+		go func() {
+			for i := 0; i < areasCount; i++ {
+				log.Println(q.PopOrWait())
+			}
+		}()
 	}
 
-	assert.Equal(t, areasCount, counter)
+	popConcurrently()
+	popConcurrently()
+	popConcurrently()
+
+	<-time.After(1 * time.Second)
+	assert.Equal(t, q.Length(), 0)
 }
 
 func Test_PopOrWait(t *testing.T) {
@@ -36,6 +44,7 @@ func Test_PopOrWait(t *testing.T) {
 			defer close(res)
 			q.Push(models.ExploredArea{})
 			q.PopOrWait()
+			q.PopOrWait() // alway wait here
 		}()
 
 		return res

@@ -65,7 +65,6 @@ func (a *AreaQueue) Length() int {
 	return a.len
 }
 
-// очередь с приоритетом
 type priorityQueue []*queueItem
 
 type queueItem struct {
