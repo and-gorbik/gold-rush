@@ -1,13 +1,11 @@
-package app
+package infrastructure
 
 import (
 	"net/http"
 	"time"
-
-	"gold-rush/models"
 )
 
-func buildHTTPClient(timeout time.Duration) *http.Client {
+func BuildHTTPClient(timeout time.Duration, maxIdleConns, maxConnsPerHost, maxIdleConnsPerHost int) *http.Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = maxIdleConns
 	t.MaxConnsPerHost = maxConnsPerHost
@@ -17,12 +15,4 @@ func buildHTTPClient(timeout time.Duration) *http.Client {
 		Timeout:   timeout,
 		Transport: t,
 	}
-}
-
-func readError(err error) (string, bool) {
-	if e, ok := err.(*models.BusinessError); ok {
-		return e.Message, true
-	}
-
-	return err.Error(), false
 }

@@ -1,121 +1,40 @@
 package app
 
 import (
-	"log"
+	"flag"
 	"time"
 
-	"gold-rush/models"
+	"gold-rush/app/earners"
+	"gold-rush/app/exchangers"
+	"gold-rush/app/explorers"
+	"gold-rush/app/licensers"
+	"gold-rush/config"
 	"gold-rush/server"
 )
 
 const (
-	maxArea             = 3500
-	maxDepth            = 10
-	totalTreasuresCount = 490000
-	totalCoinsCount     = 23030000
+	TotalCoinsCount = 23030000
 )
 
 var (
-	areaSize          = 70
-	areasCount        = maxArea * maxArea / areaSize / areaSize
-	avgTreasuresCount = totalTreasuresCount / areasCount
+	cfg *config.Config
 )
 
-var (
-	maxIdleConns        = 100
-	maxConnsPerHost     = 100
-	maxIdleConnsPerHost = 100
-
-	exploreTimeout = 10 * time.Second
-	digTimeout     = 1 * time.Second
-	cashTimeout    = 2 * time.Second
-	licenseTimeout = 3 * time.Second
-	balanceTimeout = 4 * time.Second
-	statusTimeout  = 1 * time.Second
-)
-
-type App struct {
-	provider goldRushServer
+func init() {
+	path := flag.String("path", "config.yaml", "config path")
+	flag.Parse()
+	cfg = config.LoadFrom(*path)
 }
 
-func New() *App {
-	p := &server.GoldRushServer{
-		ExploreClient: buildHTTPClient(exploreTimeout),
-		DigClient:     buildHTTPClient(digTimeout),
-		CashClient:    buildHTTPClient(cashTimeout),
-		LicenseClient: buildHTTPClient(licenseTimeout),
-		BalanceClient: buildHTTPClient(balanceTimeout),
-		StatusClient:  buildHTTPClient(statusTimeout),
-	}
+func Run() {
+	provider := server.New(cfg)
 
-	return &App{provider: p}
-}
+	coins := make(chan int, TotalCoinsCount)
+	explorer := explorers.NewAreaExplorer(cfg.Explorer, provider, cfg.App.AreaSize)
 
-func (a *App) explore(workers int) *AreaQueue {
-	var posX, posY int
-	points := make(chan Point, areasCount)
+	licenser := licensers.NewLicenser(cfg.Licenser, provider, coins)
+	earner := earners.NewTreasuresEarner(cfg.Earner, provider, explorer.Queue(), licenser.Lincenses())
+	_ = exchangers.NewTreasuresExchanger(cfg.Exchanger, provider, coins, earner.Treasures())
 
-	go func() {
-		defer close(points)
-
-		for i := 0; i < areasCount; i++ {
-			points <- Point{X: posX, Y: posY}
-
-			if posX >= maxArea {
-				posX, posY = 0, posY+areaSize
-			} else {
-				posX = posX + areaSize
-			}
-		}
-	}()
-
-	queue := NewAreaQueue()
-
-	for i := 0; i < workers; i++ {
-		go a.explorer(points, queue)
-	}
-
-	return queue
-}
-
-func (a *App) explorer(points <-chan Point, queue *AreaQueue) {
-	for point := range points {
-		area := models.Area{
-			PosX:  point.X,
-			PosY:  point.Y,
-			SizeX: areaSize,
-			SizeY: areaSize,
-		}
-
-		reconnectPeriod := time.Second
-		for {
-			exploredArea, err := a.provider.Explore(area)
-			if err == nil {
-				queue.Push(exploredArea)
-				break
-			}
-
-			if msg, isBusiness := readError(err); isBusiness {
-				log.Fatal(msg)
-			}
-
-			<-time.After(reconnectPeriod)
-			reconnectPeriod *= 2
-		}
-	}
-}
-
-func (a *App) Run() {
-	areas := a.explore(4)
-
-	for i := 0; i < areasCount; {
-		area := areas.Pop()
-		if area.Amount < avgTreasuresCount {
-			areas.Push(area)
-			<-time.After(time.Millisecond)
-			continue
-		}
-
-		i++
-	}
+	<-time.After(10 * time.Minute)
 }

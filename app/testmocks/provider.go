@@ -1,4 +1,4 @@
-package mocks
+package testmocks
 
 import (
 	"errors"
@@ -17,8 +17,8 @@ func (GoodProvider) GetBalance() (models.Balance, error) {
 	return models.Balance{}, nil
 }
 
-func (GoodProvider) GetLicenses() ([]models.License, error) {
-	return []models.License{}, nil
+func (GoodProvider) GetLicenses() ([]models.LicenseFull, error) {
+	return []models.LicenseFull{}, nil
 }
 
 func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.License, error) {

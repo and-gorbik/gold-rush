@@ -1,6 +1,7 @@
 package server
 
 import (
+	"gold-rush/config"
 	"net/http"
 )
 
@@ -20,4 +21,8 @@ type GoldRushServer struct {
 	LicenseClient *http.Client
 	BalanceClient *http.Client
 	StatusClient  *http.Client
+}
+
+func New(cfg *config.Config) *GoldRushServer {
+	return &GoldRushServer{}
 }

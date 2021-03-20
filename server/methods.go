@@ -34,7 +34,7 @@ func (s *GoldRushServer) GetBalance() (balance models.Balance, err error) {
 	return
 }
 
-func (s *GoldRushServer) GetLicenses() (licenses []models.License, err error) {
+func (s *GoldRushServer) GetLicenses() (licenses []models.LicenseFull, err error) {
 	body, err := doRequest(s.LicenseClient, http.MethodGet, licensesURL, nil)
 	if err != nil {
 		return

@@ -2,13 +2,12 @@ package server
 
 import (
 	"bytes"
+	"gold-rush/infrastructure"
 	"io"
 	"io/ioutil"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
-
-	"gold-rush/models"
 )
 
 func doRequest(client *http.Client, method, url string, input interface{}) ([]byte, error) {
@@ -40,7 +39,7 @@ func doRequest(client *http.Client, method, url string, input interface{}) ([]by
 }
 
 func newBusinessError(body []byte) error {
-	var businessError models.BusinessError
+	var businessError infrastructure.BusinessError
 	if err := jsoniter.Unmarshal(body, &businessError); err != nil {
 		return err
 	}

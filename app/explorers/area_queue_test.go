@@ -1,4 +1,4 @@
-package app
+package explorers
 
 import (
 	"runtime"
@@ -7,23 +7,27 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gold-rush/app/mocks"
+	"gold-rush/app/testmocks"
 	"gold-rush/models"
 )
 
 func Test_PushPop_Concurrently(t *testing.T) {
-	q := pushAllConcurrently(mocks.ExploredAreasGenerator(maxArea, areaSize))
+	maxArea := 3500
+	areaSize := 70
+	areasCount := maxArea * maxArea / areaSize / areaSize
+
+	q := pushAllConcurrently(testmocks.ExploredAreasGenerator(maxArea, areaSize))
 
 	counter := 0
 	for i := 0; i < areasCount; i++ {
-		q.Pop()
+		q.PopOrWait()
 		counter++
 	}
 
 	assert.Equal(t, areasCount, counter)
 }
 
-func Test_PopWait(t *testing.T) {
+func Test_PopOrWait(t *testing.T) {
 	q := NewAreaQueue()
 
 	alwaysBlocking := func() <-chan struct{} {
@@ -31,8 +35,7 @@ func Test_PopWait(t *testing.T) {
 		go func() {
 			defer close(res)
 			q.Push(models.ExploredArea{})
-			q.Pop()
-			q.Pop()
+			q.PopOrWait()
 		}()
 
 		return res

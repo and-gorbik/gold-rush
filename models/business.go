@@ -4,13 +4,17 @@ type ServiceStatus map[string]interface{}
 
 type Balance struct {
 	Value  int   `json:"balance"`
-	Wallet []int `json:"waller"`
+	Wallet []int `json:"wallet"`
 }
 
 type License struct {
 	ID         int `json:"id"`
 	DigAllowed int `json:"digAllowed"`
-	DigUsed    int `json:"digUsed"`
+}
+
+type LicenseFull struct {
+	License
+	DigUsed int `json:"digUsed"`
 }
 
 type PaymentForLicense []int

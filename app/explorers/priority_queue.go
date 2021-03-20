@@ -1,4 +1,4 @@
-package app
+package explorers
 
 import (
 	"container/heap"
@@ -45,7 +45,7 @@ func (a *AreaQueue) Push(ea models.ExploredArea) {
 	a.len++
 }
 
-func (a *AreaQueue) Pop() models.ExploredArea {
+func (a *AreaQueue) PopOrWait() models.ExploredArea {
 	a.mx.Lock()
 	defer a.mx.Unlock()
 
