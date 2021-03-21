@@ -50,3 +50,19 @@ func generateExploredAreas(maxArea, areaSize int) []models.ExploredArea {
 
 	return areas
 }
+
+type fakeQueue struct {
+	ch <-chan models.ExploredArea
+}
+
+func (*fakeQueue) Push(area models.ExploredArea) {}
+
+func (f *fakeQueue) PopOrWait() models.ExploredArea {
+	return <-f.ch
+}
+
+func GetFakeQueue() *fakeQueue {
+	return &fakeQueue{
+		ch: ExploredAreasGenerator(3500, 70),
+	}
+}

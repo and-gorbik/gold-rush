@@ -8,7 +8,7 @@ type TreasuresExchanger struct {
 	provider provider
 }
 
-func NewTreasuresExchanger(cfg config.Entity, provider provider, coins chan<- int, treasures <-chan string) *TreasuresExchanger {
+func NewTreasuresExchanger(cfg config.Entity, provider provider, coins chan<- int, treasures <-chan []string) *TreasuresExchanger {
 	return &TreasuresExchanger{}
 }
 

@@ -31,6 +31,7 @@ func (GoodProvider) Explore(area models.Area) (models.ExploredArea, error) {
 }
 
 func (GoodProvider) Dig(params models.DigParams) (models.TreasuresList, error) {
+	time.Sleep(time.Millisecond)
 	return models.TreasuresList{}, nil
 }
 
@@ -45,4 +46,13 @@ type BadExplorer struct {
 func (BadExplorer) Explore(area models.Area) (models.ExploredArea, error) {
 	time.Sleep(time.Millisecond)
 	return models.ExploredArea{}, errors.New("error")
+}
+
+type BadDigger struct {
+	GoodProvider
+}
+
+func (BadDigger) Dig(params models.DigParams) (models.TreasuresList, error) {
+	time.Sleep(time.Second)
+	return nil, errors.New("error")
 }
