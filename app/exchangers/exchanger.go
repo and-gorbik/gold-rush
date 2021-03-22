@@ -5,6 +5,7 @@ import (
 
 	"gold-rush/config"
 	"gold-rush/models"
+	"gold-rush/server"
 )
 
 type TreasuresExchanger struct {
@@ -12,9 +13,9 @@ type TreasuresExchanger struct {
 	done     chan struct{}
 }
 
-func NewTreasuresExchanger(cfg config.Entity, provider provider, treasures <-chan []string, coins chan<- int) *TreasuresExchanger {
+func NewTreasuresExchanger(cfg config.Entity, treasures <-chan []string, coins chan<- int) *TreasuresExchanger {
 	t := &TreasuresExchanger{
-		provider: provider,
+		provider: server.NewExchangerProvider(cfg.Client),
 		done:     make(chan struct{}),
 	}
 

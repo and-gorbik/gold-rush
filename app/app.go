@@ -9,7 +9,6 @@ import (
 	"gold-rush/app/explorers"
 	"gold-rush/app/licensers"
 	"gold-rush/config"
-	"gold-rush/server"
 )
 
 const (
@@ -27,14 +26,11 @@ func init() {
 }
 
 func Run() {
-	provider := server.New(cfg)
-
 	coins := make(chan int, TotalCoinsCount)
-	explorer := explorers.NewAreaExplorer(cfg.Explorer, provider, cfg.App.AreaSize)
-
-	licenser := licensers.NewLicenser(cfg.Licenser, provider, coins)
-	earner := earners.NewTreasuresEarner(cfg.Earner, provider, explorer.Queue(), licenser.Lincenses())
-	_ = exchangers.NewTreasuresExchanger(cfg.Exchanger, provider, coins, earner.Treasures())
+	explorer := explorers.NewAreaExplorer(cfg.Explorer, cfg.App.AreaSize)
+	licenser := licensers.NewLicenser(cfg.Licenser, coins)
+	earner := earners.NewTreasuresEarner(cfg.Earner, explorer.Queue(), licenser.Lincenses())
+	_ = exchangers.NewTreasuresExchanger(cfg.Exchanger, earner.Treasures(), coins)
 
 	<-time.After(10 * time.Minute)
 }

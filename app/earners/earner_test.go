@@ -1,38 +1,29 @@
 package earners
 
-import (
-	"log"
-	"testing"
-	"time"
+// func Test_TreasuresEarner_Run_Success(t *testing.T) {
+// 	goodDigger := testmocks.GoodProvider{}
 
-	"gold-rush/app/testmocks"
-	"gold-rush/config"
-)
+// 	licenses := make(chan int, 100)
 
-func Test_TreasuresEarner_Run_Success(t *testing.T) {
-	goodDigger := testmocks.GoodProvider{}
+// 	go func() {
+// 		for i := 0; i < 100; i++ {
+// 			<-time.After(time.Millisecond)
+// 			licenses <- i
+// 		}
+// 	}()
 
-	licenses := make(chan int, 100)
+// 	te := NewTreasuresEarner(
+// 		config.Entity{},
+// 		goodDigger,
+// 		testmocks.GetFakeQueue(),
+// 		licenses,
+// 	)
 
-	go func() {
-		for i := 0; i < 100; i++ {
-			<-time.After(time.Millisecond)
-			licenses <- i
-		}
-	}()
+// 	i := 0
+// 	for treasures := range te.Treasures() {
+// 		log.Println(i, treasures)
+// 		i++
+// 	}
 
-	te := NewTreasuresEarner(
-		config.Entity{},
-		goodDigger,
-		testmocks.GetFakeQueue(),
-		licenses,
-	)
-
-	i := 0
-	for treasures := range te.Treasures() {
-		log.Println(i, treasures)
-		i++
-	}
-
-	<-time.After(5 * time.Second)
-}
+// 	<-time.After(5 * time.Second)
+// }

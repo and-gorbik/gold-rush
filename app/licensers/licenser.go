@@ -2,6 +2,7 @@ package licensers
 
 import (
 	"gold-rush/config"
+	"gold-rush/server"
 )
 
 const (
@@ -14,9 +15,9 @@ type Licenser struct {
 	provider provider
 }
 
-func NewLicenser(cfg config.Entity, provider provider, coins <-chan int) *Licenser {
+func NewLicenser(cfg config.Entity, coins <-chan int) *Licenser {
 	return &Licenser{
-		provider: provider,
+		provider: server.NewLicenserProvider(cfg.Client),
 	}
 }
 

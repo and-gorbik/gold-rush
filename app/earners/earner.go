@@ -6,6 +6,7 @@ import (
 
 	"gold-rush/config"
 	"gold-rush/models"
+	"gold-rush/server"
 )
 
 const (
@@ -39,9 +40,9 @@ type queue interface {
 	PopOrWait() models.ExploredArea
 }
 
-func NewTreasuresEarner(cfg config.Entity, provider provider, areas queue, licenses <-chan int) *TreasuresEarner {
+func NewTreasuresEarner(cfg config.Entity, areas queue, licenses <-chan int) *TreasuresEarner {
 	e := &TreasuresEarner{
-		provider:  provider,
+		provider:  server.NewEarnerProvider(cfg.Client),
 		treasures: make(chan []string, TotalTreasuresCount),
 		licenses:  licenses,
 	}
