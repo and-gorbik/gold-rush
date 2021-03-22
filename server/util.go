@@ -5,6 +5,7 @@ import (
 	"gold-rush/infrastructure"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
@@ -13,26 +14,30 @@ import (
 func doRequest(client *http.Client, method, url string, input interface{}) ([]byte, error) {
 	reqBody, err := createRequestBody(input)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, exploreURL, reqBody)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	body, err := readBody(resp.Body)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, newBusinessError(body)
+		if resp.StatusCode >= http.StatusInternalServerError {
+			return nil, err
+		}
+
+		log.Fatal(newBusinessError(body))
 	}
 
 	return body, nil
