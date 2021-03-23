@@ -4,9 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"gold-rush/config"
 	"gold-rush/models"
-	"gold-rush/server"
 )
 
 const (
@@ -29,14 +27,14 @@ type Licenser struct {
 	isCalculated bool
 }
 
-func NewLicenser(cfg config.Entity, coins <-chan int) *Licenser {
+func NewLicenser(provider provider, workers int, coins <-chan int) *Licenser {
 	licenser := &Licenser{
 		licenses:             make(chan int, 100),
 		licensesFromProvider: make(chan models.License, MaxActiveLicenses),
-		provider:             server.NewLicenserProvider(cfg.Client),
+		provider:             provider,
 		prices:               make(map[int]int),
 		bestPrice:            1,
-		workersCount:         cfg.Workers,
+		workersCount:         workers,
 	}
 
 	go licenser.run(coins)

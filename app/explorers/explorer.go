@@ -5,10 +5,8 @@ import (
 	"time"
 
 	"gold-rush/app/earners"
-	"gold-rush/config"
 	"gold-rush/infrastructure"
 	"gold-rush/models"
-	"gold-rush/server"
 )
 
 const (
@@ -23,17 +21,17 @@ type AreaExplorer struct {
 	provider          provider
 }
 
-func NewAreaExplorer(cfg config.Entity, areaSize int) *AreaExplorer {
+func NewAreaExplorer(provider provider, workers int, areaSize int) *AreaExplorer {
 	areaCount := MaxArea * MaxArea / areaSize / areaSize
 
 	a := &AreaExplorer{
 		areaSize:          areaSize,
 		areasCount:        areaCount,
 		avgTreasuresCount: earners.TotalTreasuresCount / areaCount,
-		provider:          server.NewExplorerProvider(cfg.Client),
+		provider:          provider,
 	}
 
-	a.areas = a.explore(cfg.Workers)
+	a.areas = a.explore(workers)
 
 	return a
 }

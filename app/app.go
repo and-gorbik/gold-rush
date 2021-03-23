@@ -9,6 +9,7 @@ import (
 	"gold-rush/app/explorers"
 	"gold-rush/app/licensers"
 	"gold-rush/config"
+	"gold-rush/server"
 )
 
 const (
@@ -26,11 +27,32 @@ func init() {
 }
 
 func Run() {
+	// statusProvider := server.NewStatusProvider(cfg.StatusClient)
+	// statusProvider
+
 	coins := make(chan int, TotalCoinsCount)
-	explorer := explorers.NewAreaExplorer(cfg.Explorer, cfg.App.AreaSize)
-	licenser := licensers.NewLicenser(cfg.Licenser, coins)
-	earner := earners.NewTreasuresEarner(cfg.Earner, explorer.Queue(), licenser.Lincenses())
-	_ = exchangers.NewTreasuresExchanger(cfg.Exchanger, earner.Treasures(), coins)
+
+	explorer := explorers.NewAreaExplorer(
+		server.NewExplorerProvider(cfg.Explorer.Client),
+		cfg.Explorer.Workers, cfg.App.AreaSize,
+	)
+
+	licenser := licensers.NewLicenser(
+		server.NewLicenserProvider(cfg.Licenser.Client),
+		cfg.Licenser.Workers, coins,
+	)
+
+	// количество воркеров игнорируется
+	earner := earners.NewTreasuresEarner(
+		server.NewEarnerProvider(cfg.Earner.Client),
+		cfg.Earner.Workers, explorer.Queue(), licenser.Lincenses(),
+	)
+
+	// количество воркеров игнорируется
+	_ = exchangers.NewTreasuresExchanger(
+		server.NewExchangerProvider(cfg.Exchanger.Client),
+		cfg.Exchanger.Workers, earner.Treasures(), coins,
+	)
 
 	<-time.After(10 * time.Minute)
 }

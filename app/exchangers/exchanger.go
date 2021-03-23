@@ -3,19 +3,19 @@ package exchangers
 import (
 	"time"
 
-	"gold-rush/config"
 	"gold-rush/models"
-	"gold-rush/server"
 )
 
 type TreasuresExchanger struct {
 	provider provider
+	workers  int
 	done     chan struct{}
 }
 
-func NewTreasuresExchanger(cfg config.Entity, treasures <-chan []string, coins chan<- int) *TreasuresExchanger {
+func NewTreasuresExchanger(provider provider, workers int, treasures <-chan []string, coins chan<- int) *TreasuresExchanger {
 	t := &TreasuresExchanger{
-		provider: server.NewExchangerProvider(cfg.Client),
+		provider: provider,
+		workers:  workers,
 		done:     make(chan struct{}),
 	}
 
