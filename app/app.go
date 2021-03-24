@@ -27,8 +27,15 @@ func init() {
 }
 
 func Run() {
-	// statusProvider := server.NewStatusProvider(cfg.StatusClient)
-	// statusProvider
+	statusProvider := server.NewStatusProvider(cfg.StatusClient)
+	retryDur := 10 * time.Millisecond
+	for {
+		if err := statusProvider.HealthCheck(); err == nil {
+			break
+		}
+		<-time.After(retryDur)
+		retryDur *= 2
+	}
 
 	coins := make(chan int, TotalCoinsCount)
 
