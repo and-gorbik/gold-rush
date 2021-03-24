@@ -13,6 +13,7 @@ const (
 
 var (
 	getCoinTimeout = 1 * time.Millisecond
+	maxCapacity    = 100
 )
 
 type Licenser struct {
@@ -21,8 +22,9 @@ type Licenser struct {
 	coins                chan int
 	provider             provider
 	workersCount         int
+	payment              []int
 
-	prices       map[int]int // [cost]count
+	capacities   []int // prices[cost] = license capacity
 	bestPrice    int
 	isCalculated bool
 }
@@ -32,7 +34,7 @@ func NewLicenser(provider provider, workers int, coins <-chan int) *Licenser {
 		licenses:             make(chan int, 100),
 		licensesFromProvider: make(chan models.License, MaxActiveLicenses),
 		provider:             provider,
-		prices:               make(map[int]int),
+		capacities:           make([]int, 0, maxCapacity),
 		bestPrice:            1,
 		workersCount:         workers,
 	}
@@ -57,35 +59,39 @@ func (l *Licenser) run(coins <-chan int) {
 
 	var mx sync.Mutex
 	for i := 0; i < l.workersCount; i++ {
-		go l.buy(&mx, coins)
+		go l.licenser(&mx, coins)
 	}
 }
 
-func (l *Licenser) buy(mx *sync.Mutex, coins <-chan int) {
-	// 1. Посчитать лучшую цену
-	// 2. Набрать необходимое количество coin'ов в payment
-	// 3. Если лишних coin'ов в канале нет (timeout), начать покупку бесплатной лицензии
-	// 4. Иначе, если сумма набрана, купить платную лицензию
-
-	price := l.calcBestPrice(mx)
-	payment := make([]int, 0, price)
-
+// 1. Посчитать лучшую цену
+// 2. Набрать необходимое количество coin'ов в payment
+// 3. Если лишних coin'ов в канале нет (timeout), начать покупку бесплатной лицензии
+// 4. Иначе, если сумма набрана, купить платную лицензию
+func (l *Licenser) licenser(mx *sync.Mutex, coins <-chan int) {
 	for {
-		select {
-		case <-time.After(getCoinTimeout):
-		case coin := <-coins:
-			payment = append(payment, coin)
-			if len(payment) != cap(payment) {
-				continue
+		price := l.calcBestPrice(mx)
+		l.buyLicense(mx, l.getPayment(mx, price))
+
+		for {
+			select {
+			case <-time.After(getCoinTimeout):
+			case coin := <-coins:
+				mx.Lock()
+				l.payment = append(l.payment, coin)
+				if len(l.payment) != price {
+					mx.Unlock()
+					continue
+				}
+				mx.Unlock()
 			}
 
-			// buy license
+			// timeout or fulled payment
+			break
 		}
-
-		// timeout or fulled payment
-		break
 	}
+}
 
+func (l *Licenser) buyLicense(mx *sync.Mutex, payment []int) {
 	retryDur := 10 * time.Millisecond
 	for {
 		license, err := l.provider.BuyLicense(payment)
@@ -93,12 +99,14 @@ func (l *Licenser) buy(mx *sync.Mutex, coins <-chan int) {
 			// prices statistics
 			mx.Lock()
 			if !l.isCalculated {
-				l.prices[len(payment)] = license.DigAllowed
+				l.capacities = append(l.capacities, license.DigAllowed)
 			}
 			mx.Unlock()
 
 			l.licensesFromProvider <- license
+			return
 		}
+
 		<-time.After(retryDur)
 		retryDur *= 2
 	}
@@ -112,22 +120,41 @@ func (l *Licenser) calcBestPrice(mx *sync.Mutex) int {
 		return l.bestPrice
 	}
 
-	if len(l.prices) == 100 { // prices увеличивается воркерами
-		bestCountsPerCost := float32(0)
-		bestCost := 0
-		for cost, count := range l.prices {
-			if float32(count/cost) > bestCountsPerCost {
-				bestCountsPerCost = float32(count / cost)
-				bestCost = cost
+	if len(l.capacities) >= maxCapacity { // capacities увеличивается воркерами
+		bestCapsPerPrice := float32(0)
+		bestPrice := 0
+		for price, capacity := range l.capacities {
+			// при одинаковом bestCapsPerPrice, выгодно взять больший price,
+			// чтобы делать меньше запросов
+			kf := float32(capacity / (price + 1))
+			if kf >= bestCapsPerPrice {
+				bestCapsPerPrice = kf
+				bestPrice = price
 			}
 		}
 
-		l.bestPrice = bestCost
+		l.bestPrice = bestPrice
 		l.isCalculated = true
-		return bestCost
+		return bestPrice
 	}
 
-	return l.bestPrice + 1
+	l.bestPrice++
+	return l.bestPrice
+}
+
+func (l *Licenser) getPayment(mx *sync.Mutex, count int) []int {
+	mx.Lock()
+	defer mx.Unlock()
+
+	if len(l.payment) < count {
+		return []int{}
+	}
+
+	result := make([]int, count)
+	copy(result, l.payment[len(l.payment)-count:])
+	l.payment = l.payment[:len(l.payment)-count]
+
+	return result
 }
 
 func (l *Licenser) IncreaseWorkers(count int) {
