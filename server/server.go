@@ -16,8 +16,17 @@ const (
 	cashURL        = "/cash"
 )
 
+var (
+	host   = envOrDefault("ADDRESS", "0.0.0.0")
+	port   = envOrDefault("Port", "8000")
+	schema = envOrDefault("Schema", "http")
+)
+
 type ExplorerProvider struct {
 	client *http.Client
+	schema string
+	host   string
+	port   int
 }
 
 func NewExplorerProvider(cfg config.Client) *ExplorerProvider {

@@ -1,0 +1,40 @@
+app:
+  area_size: 70
+status_client:
+  max_idle_conns: 100
+  max_conns_per_host: 100
+  max_idle_conns_per_host: 100
+  timeout: "1s"
+balance_client:
+  max_idle_conns: 100
+  max_conns_per_host: 100
+  max_idle_conns_per_host: 100
+  timeout: "1s"
+explorer:
+  workers: 70
+  client:
+    max_idle_conns: 100
+    max_conns_per_host: 100
+    max_idle_conns_per_host: 100
+    timeout: "1s"
+licenser:
+  workers: 50
+  client:
+    max_idle_conns: 100
+    max_conns_per_host: 100
+    max_idle_conns_per_host: 100
+    timeout: "1s"
+earner:
+  workers: 0
+  client:
+    max_idle_conns: 100
+    max_conns_per_host: 100
+    max_idle_conns_per_host: 100
+    timeout: "1s"
+exchanger:
+  workers: 0
+  client:
+    max_idle_conns: 100
+    max_conns_per_host: 100
+    max_idle_conns_per_host: 100
+    timeout: "1s"

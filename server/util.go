@@ -2,22 +2,25 @@ package server
 
 import (
 	"bytes"
-	"gold-rush/infrastructure"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	jsoniter "github.com/json-iterator/go"
+
+	"gold-rush/infrastructure"
 )
 
-func doRequest(client *http.Client, method, url string, input interface{}) ([]byte, error) {
+func doRequest(client *http.Client, method, path string, input interface{}) ([]byte, error) {
 	reqBody, err := createRequestBody(input)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, exploreURL, reqBody)
+	req, err := http.NewRequest(http.MethodPost, getURL(path), reqBody)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -68,4 +71,17 @@ func createRequestBody(model interface{}) (io.Reader, error) {
 	}
 
 	return bytes.NewReader(data), nil
+}
+
+func getURL(path string) string {
+	return fmt.Sprintf("%s://%s%s:%s", schema, host, path, port)
+}
+
+func envOrDefault(name, def string) string {
+	env := os.Getenv(name)
+	if env == "" {
+		env = def
+	}
+
+	return env
 }

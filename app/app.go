@@ -2,6 +2,9 @@ package app
 
 import (
 	"flag"
+	"log"
+	"os"
+	"path"
 	"time"
 
 	"gold-rush/app/earners"
@@ -17,7 +20,12 @@ const (
 )
 
 func Run() {
-	path := flag.String("path", "config.yaml", "config path")
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	path := flag.String("path", path.Join(dir, "config.yaml"), "config path")
 	flag.Parse()
 	cfg := config.LoadFrom(*path)
 

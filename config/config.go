@@ -3,6 +3,7 @@ package config
 import (
 	"io/ioutil"
 	"log"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,7 +19,6 @@ type Config struct {
 }
 
 type App struct {
-	Port     int `yaml:"port"`
 	AreaSize int `yaml:"area_size"`
 }
 
@@ -28,10 +28,10 @@ type Entity struct {
 }
 
 type Client struct {
-	MaxIdleConns        int `yaml:"max_idle_conns"`
-	MaxConnsPerHost     int `yaml:"max_conns_per_host"`
-	MaxIdleConnsPerHost int `yaml:"max_idle_conns_per_host"`
-	Timeout             int `yaml:"timeout"`
+	MaxIdleConns        int           `yaml:"max_idle_conns"`
+	MaxConnsPerHost     int           `yaml:"max_conns_per_host"`
+	MaxIdleConnsPerHost int           `yaml:"max_idle_conns_per_host"`
+	Timeout             time.Duration `yaml:"timeout"`
 }
 
 func LoadFrom(path string) *Config {
