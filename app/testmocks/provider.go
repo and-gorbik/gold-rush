@@ -2,6 +2,7 @@ package testmocks
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"time"
 
@@ -26,8 +27,13 @@ func (GoodProvider) GetLicenses() ([]models.LicenseFull, error) {
 }
 
 func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.License, error) {
+	defer log.Println("BuyLicense()")
+
 	time.Sleep(time.Second)
 	capacity := BuyLicense(len(payment))
+	if len(payment) == 0 {
+		capacity = 3
+	}
 	rand.Seed(time.Now().UnixNano())
 	return models.License{
 		ID:         rand.Int(),
@@ -36,18 +42,30 @@ func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.License
 }
 
 func (GoodProvider) Explore(area models.Area) (models.ExploredArea, error) {
-	time.Sleep(time.Millisecond)
-	return models.ExploredArea{}, nil
+	defer log.Println("Explore()")
+
+	time.Sleep(time.Second)
+	rand.Seed(time.Now().UnixNano())
+	return models.ExploredArea{
+		Area:   area,
+		Amount: rand.Intn(400),
+	}, nil
 }
 
 func (GoodProvider) Dig(params models.DigParams) (models.TreasuresList, error) {
-	time.Sleep(time.Millisecond)
-	return models.TreasuresList{}, nil
+	defer log.Println("Dig()")
+
+	time.Sleep(time.Second)
+	return models.TreasuresList(GenTreasuresList()), nil
 }
 
 func (GoodProvider) ExchangeTreasure(treasure models.Treasure) (models.PaymentForTreasure, error) {
-	return models.PaymentForTreasure{}, nil
+	defer log.Println("ExchangeTreasure()")
+
+	return models.PaymentForTreasure(GetPaymentForTreasure()), nil
 }
+
+// BAD ONES
 
 type BadExplorer struct {
 	GoodProvider

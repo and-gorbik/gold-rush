@@ -4,12 +4,12 @@ import (
 	"sync"
 	"time"
 
+	"gold-rush/app/explorers"
 	"gold-rush/models"
 )
 
 const (
-	TotalTreasuresCount = 490000
-	MaxDepth            = 10
+	MaxDepth = 10
 )
 
 // point represents a unit of digging for worker
@@ -28,7 +28,6 @@ type TreasuresEarner struct {
 	// workers   map[string]worker
 	// mx        sync.RWMutex
 	// done      chan struct{}
-	licenses  <-chan int
 	treasures chan []string
 	provider  provider
 	workers   int
@@ -42,12 +41,11 @@ type queue interface {
 func NewTreasuresEarner(provider provider, workers int, areas queue, licenses <-chan int) *TreasuresEarner {
 	e := &TreasuresEarner{
 		provider:  provider,
-		treasures: make(chan []string, TotalTreasuresCount),
-		licenses:  licenses,
+		treasures: make(chan []string, explorers.TotalTreasuresCount),
 		workers:   workers,
 	}
 
-	go e.run(areas)
+	go e.run(areas, licenses)
 
 	return e
 }
@@ -73,7 +71,7 @@ func (t *TreasuresEarner) Stop() {
 // 3. воркер, ответственный за копание в точке (x,y), копает все 10 уровней
 // 4. если все клады в области найдены, воркеры завершаются, мастер переходит к следующей области
 
-func (t *TreasuresEarner) run(areas queue) {
+func (t *TreasuresEarner) run(areas queue, licenses <-chan int) {
 	for {
 		ea := areas.PopOrWait()
 		var mx sync.RWMutex
@@ -96,7 +94,7 @@ func (t *TreasuresEarner) run(areas queue) {
 		wg.Add(ea.Area.SizeX * ea.Area.SizeY)
 		for i := 0; i < ea.Area.SizeX; i++ {
 			for j := 0; j < ea.Area.SizeY; j++ {
-				go t.dig(done, wg, &mx, &earnedCount, point{
+				go t.dig(done, wg, &mx, &earnedCount, licenses, point{
 					X: ea.Area.PosX + i,
 					Y: ea.Area.PosY + j,
 					Z: 0,
@@ -111,43 +109,37 @@ func (t *TreasuresEarner) run(areas queue) {
 // Когда находит сокровище, добавляет его в канал и увеличивает общую для всех воркеров переменную.
 // По этой переменной мастер узнает, когда все сокровища на территории будут собраны
 // и завершит всех воркеров, чтобы они не делали лишней работы.
-func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.Locker, counter *int, p point) {
+func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.Locker, counter *int, licenses <-chan int, p point) {
 	defer wg.Done()
 
-	work := func() {
-		for z := 0; z < 10; z++ {
-			license := <-t.licenses
-			p.Z = z + 1
+	for z := 0; z < 10; z++ {
+		license := <-licenses
+		p.Z = z + 1
 
-			retryDur := 10 * time.Millisecond
-			for {
-				treasures, err := t.provider.Dig(models.DigParams{
-					LicenseID: license,
-					PosX:      p.X,
-					PosY:      p.Y,
-					Depth:     p.Z,
-				})
-				if err == nil {
-					t.treasures <- treasures
-					mx.Lock()
-					*counter++
-					mx.Unlock()
-					break
-				}
-
-				<-time.After(retryDur)
-				retryDur *= 2
+		retryDur := 10 * time.Millisecond
+		for {
+			select {
+			case <-done:
+				return
+			default:
 			}
-		}
-	}
 
-	for {
-		select {
-		case <-done:
-			return
-		default:
-		}
+			treasures, err := t.provider.Dig(models.DigParams{
+				LicenseID: license,
+				PosX:      p.X,
+				PosY:      p.Y,
+				Depth:     p.Z,
+			})
+			if err == nil {
+				t.treasures <- treasures
+				mx.Lock()
+				*counter++
+				mx.Unlock()
+				break
+			}
 
-		work()
+			<-time.After(retryDur)
+			retryDur *= 2
+		}
 	}
 }

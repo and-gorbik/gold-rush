@@ -8,11 +8,3 @@ type BusinessError struct {
 func (err BusinessError) Error() string {
 	return err.Message
 }
-
-func ReadError(err error) (string, bool) {
-	if e, ok := err.(*BusinessError); ok {
-		return e.Message, true
-	}
-
-	return err.Error(), false
-}

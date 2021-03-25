@@ -1,16 +1,14 @@
 package explorers
 
 import (
-	"log"
 	"time"
 
-	"gold-rush/app/earners"
-	"gold-rush/infrastructure"
 	"gold-rush/models"
 )
 
 const (
-	MaxArea = 3500
+	MaxArea             = 3500
+	TotalTreasuresCount = 490000
 )
 
 type AreaExplorer struct {
@@ -27,7 +25,7 @@ func NewAreaExplorer(provider provider, workers int, areaSize int) *AreaExplorer
 	a := &AreaExplorer{
 		areaSize:          areaSize,
 		areasCount:        areaCount,
-		avgTreasuresCount: earners.TotalTreasuresCount / areaCount,
+		avgTreasuresCount: TotalTreasuresCount / areaCount,
 		provider:          provider,
 	}
 
@@ -81,16 +79,12 @@ func (a *AreaExplorer) explorer(points <-chan Point, queue *AreaQueue) {
 			SizeY: a.areaSize,
 		}
 
-		reconnectPeriod := time.Second
+		reconnectPeriod := 10 * time.Second
 		for {
 			exploredArea, err := a.provider.Explore(area)
 			if err == nil {
 				queue.Push(exploredArea)
 				break
-			}
-
-			if msg, isBusiness := infrastructure.ReadError(err); isBusiness {
-				log.Fatal(msg)
 			}
 
 			<-time.After(reconnectPeriod)

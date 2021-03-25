@@ -16,17 +16,11 @@ const (
 	TotalCoinsCount = 23030000
 )
 
-var (
-	cfg *config.Config
-)
-
-func init() {
+func Run() {
 	path := flag.String("path", "config.yaml", "config path")
 	flag.Parse()
-	cfg = config.LoadFrom(*path)
-}
+	cfg := config.LoadFrom(*path)
 
-func Run() {
 	statusProvider := server.NewStatusProvider(cfg.StatusClient)
 	retryDur := 10 * time.Millisecond
 	for {
