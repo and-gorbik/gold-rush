@@ -1,6 +1,7 @@
 package exchangers
 
 import (
+	"log"
 	"time"
 
 	"gold-rush/models"
@@ -33,7 +34,7 @@ func (t *TreasuresExchanger) run(treasuresChan <-chan []string, coins chan<- int
 }
 
 func (t *TreasuresExchanger) cash(treasure string, coins chan<- int) {
-	retryDur := time.Millisecond
+	retryDur := 10 * time.Millisecond
 	for {
 		payment, err := t.provider.ExchangeTreasure(models.Treasure(treasure))
 		if err == nil {
@@ -45,6 +46,7 @@ func (t *TreasuresExchanger) cash(treasure string, coins chan<- int) {
 		}
 
 		<-time.After(retryDur)
+		log.Printf("[cash] dur: %v err: %v\n", retryDur, err)
 		retryDur *= 2
 	}
 }

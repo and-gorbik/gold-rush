@@ -7,6 +7,7 @@ RUN CGO_ENABLED=0 go build -o /bin/app .
 
 FROM alpine
 COPY --from=builder /bin/app /app
+COPY ./config.yaml . 
 
 ENV ADDRESS=default
 ENV Port=8000

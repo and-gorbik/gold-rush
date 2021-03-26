@@ -26,7 +26,7 @@ func (GoodProvider) GetLicenses() ([]models.LicenseFull, error) {
 	return []models.LicenseFull{}, nil
 }
 
-func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.License, error) {
+func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.LicenseFull, error) {
 	defer log.Println("BuyLicense()")
 
 	time.Sleep(time.Second)
@@ -35,9 +35,12 @@ func (GoodProvider) BuyLicense(payment models.PaymentForLicense) (models.License
 		capacity = 3
 	}
 	rand.Seed(time.Now().UnixNano())
-	return models.License{
-		ID:         rand.Int(),
-		DigAllowed: capacity,
+	return models.LicenseFull{
+		License: models.License{
+			ID:         rand.Int(),
+			DigAllowed: capacity,
+		},
+		DigUsed: 0,
 	}, nil
 }
 

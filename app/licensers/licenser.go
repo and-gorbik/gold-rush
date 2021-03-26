@@ -1,9 +1,11 @@
 package licensers
 
 import (
+	"log"
 	"sync"
 	"time"
 
+	"gold-rush/infrastructure"
 	"gold-rush/models"
 )
 
@@ -92,7 +94,7 @@ func (l *Licenser) licenser(mx *sync.Mutex, coins <-chan int) {
 }
 
 func (l *Licenser) buyLicense(mx *sync.Mutex, payment []int) {
-	retryDur := 10 * time.Millisecond
+	retryDur := 100 * time.Millisecond
 	for {
 		license, err := l.provider.BuyLicense(payment)
 		if err == nil {
@@ -103,11 +105,18 @@ func (l *Licenser) buyLicense(mx *sync.Mutex, payment []int) {
 			}
 			mx.Unlock()
 
-			l.licensesFromProvider <- license
+			l.licensesFromProvider <- license.License
 			return
 		}
 
+		// TODO: don't buy a license, when active licenses exists
+		if e, ok := err.(infrastructure.BusinessError); ok {
+			log.Printf("Code: %d Msg: %s\n", e.Code, e.Message)
+			<-time.After(time.Second)
+		}
+
 		<-time.After(retryDur)
+		log.Printf("[buyLicense] dur: %v err: %v\n", retryDur, err)
 		retryDur *= 2
 	}
 }

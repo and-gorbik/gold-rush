@@ -4,37 +4,37 @@ status_client:
   max_idle_conns: 100
   max_conns_per_host: 100
   max_idle_conns_per_host: 100
-  timeout: "1s"
+  timeout: "3s"
 balance_client:
   max_idle_conns: 100
   max_conns_per_host: 100
   max_idle_conns_per_host: 100
-  timeout: "1s"
+  timeout: "3s"
 explorer:
   workers: 70
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "1s"
+    timeout: "3s"
 licenser:
   workers: 50
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "1s"
+    timeout: "3s"
 earner:
   workers: 0
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "1s"
+    timeout: "3s"
 exchanger:
   workers: 0
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "1s"
+    timeout: "3s"

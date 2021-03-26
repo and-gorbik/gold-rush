@@ -6,5 +6,5 @@ import (
 
 type provider interface {
 	GetLicenses() ([]models.LicenseFull, error)
-	BuyLicense(payment models.PaymentForLicense) (models.License, error)
+	BuyLicense(payment models.PaymentForLicense) (models.LicenseFull, error)
 }

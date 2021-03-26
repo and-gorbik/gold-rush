@@ -1,6 +1,7 @@
 package earners
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -116,7 +117,7 @@ func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.
 		license := <-licenses
 		p.Z = z + 1
 
-		retryDur := 10 * time.Millisecond
+		retryDur := 100 * time.Millisecond
 		for {
 			select {
 			case <-done:
@@ -139,6 +140,7 @@ func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.
 			}
 
 			<-time.After(retryDur)
+			log.Printf("[dig] dur: %v err: %v\n", retryDur, err)
 			retryDur *= 2
 		}
 	}

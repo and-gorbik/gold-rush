@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	jsoniter "github.com/json-iterator/go"
+	// jsoniter "github.com/json-iterator/go"
 
 	"gold-rush/infrastructure"
 )
@@ -17,22 +18,28 @@ import (
 func doRequest(client *http.Client, method, path string, input interface{}) ([]byte, error) {
 	reqBody, err := createRequestBody(input)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("doRequest(%s)/NewRequest: %v\n", path, err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, getURL(path), reqBody)
+	req, err := http.NewRequest(method, getURL(path), reqBody)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("doRequest(%s)/NewRequest: %v\n", path, err)
+	}
+
+	if method == http.MethodPost {
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	body, err := readBody(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("doRequest(%s)/readBody: %v\n", path, err)
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -40,15 +47,19 @@ func doRequest(client *http.Client, method, path string, input interface{}) ([]b
 			return nil, err
 		}
 
-		log.Fatal(newBusinessError(body))
+		err = newBusinessError(body)
+		log.Printf("doRequest(%s): %v\n", path, err)
+		return nil, err
 	}
+
+	log.Println("BODY: ", string(body))
 
 	return body, nil
 }
 
 func newBusinessError(body []byte) error {
 	var businessError infrastructure.BusinessError
-	if err := jsoniter.Unmarshal(body, &businessError); err != nil {
+	if err := json.Unmarshal(body, &businessError); err != nil {
 		return err
 	}
 
@@ -62,10 +73,10 @@ func readBody(r io.ReadCloser) ([]byte, error) {
 
 func createRequestBody(model interface{}) (io.Reader, error) {
 	if model == nil {
-		return nil, nil
+		return bytes.NewReader(nil), nil
 	}
 
-	data, err := jsoniter.Marshal(model)
+	data, err := json.Marshal(model)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +85,7 @@ func createRequestBody(model interface{}) (io.Reader, error) {
 }
 
 func getURL(path string) string {
-	return fmt.Sprintf("%s://%s%s:%s", schema, host, path, port)
+	return fmt.Sprintf("%s://%s:%s%s", schema, host, port, path)
 }
 
 func envOrDefault(name, def string) string {

@@ -1,6 +1,7 @@
 package explorers
 
 import (
+	"log"
 	"time"
 
 	"gold-rush/models"
@@ -79,7 +80,7 @@ func (a *AreaExplorer) explorer(points <-chan Point, queue *AreaQueue) {
 			SizeY: a.areaSize,
 		}
 
-		reconnectPeriod := 10 * time.Second
+		reconnectPeriod := 100 * time.Millisecond
 		for {
 			exploredArea, err := a.provider.Explore(area)
 			if err == nil {
@@ -88,6 +89,7 @@ func (a *AreaExplorer) explorer(points <-chan Point, queue *AreaQueue) {
 			}
 
 			<-time.After(reconnectPeriod)
+			log.Printf("[explorer] dur: %v err: %v\n", reconnectPeriod, err)
 			reconnectPeriod *= 2
 		}
 	}

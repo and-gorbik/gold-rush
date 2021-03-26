@@ -30,12 +30,13 @@ func Run() {
 	cfg := config.LoadFrom(*path)
 
 	statusProvider := server.NewStatusProvider(cfg.StatusClient)
-	retryDur := 10 * time.Millisecond
+	retryDur := 100 * time.Millisecond
 	for {
-		if err := statusProvider.HealthCheck(); err == nil {
+		if err = statusProvider.HealthCheck(); err == nil {
 			break
 		}
 		<-time.After(retryDur)
+		log.Printf("[status] dur: %v err: %v\n", retryDur, err)
 		retryDur *= 2
 	}
 

@@ -1,10 +1,11 @@
 package server
 
 import (
-	"gold-rush/config"
-	"gold-rush/infrastructure"
 	"net/http"
 	"time"
+
+	"gold-rush/config"
+	"gold-rush/infrastructure"
 )
 
 const (

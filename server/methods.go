@@ -1,10 +1,11 @@
 package server
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
-	jsoniter "github.com/json-iterator/go"
+	// jsoniter "github.com/json-iterator/go"
 
 	"gold-rush/models"
 )
@@ -15,12 +16,7 @@ func (p *StatusProvider) HealthCheck() (err error) {
 		return
 	}
 
-	status := make(models.ServiceStatus)
-	if err = jsoniter.Unmarshal(body, &status); err != nil {
-		return
-	}
-
-	log.Println(status)
+	log.Println(string(body))
 	return
 }
 
@@ -30,7 +26,11 @@ func (p *BalanceProvider) GetBalance() (balance models.Balance, err error) {
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &balance)
+	if err = json.Unmarshal(body, &balance); err != nil {
+		// log.Println("GetBalance/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
 
@@ -40,17 +40,25 @@ func (p *LicenserProvider) GetLicenses() (licenses []models.LicenseFull, err err
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &licenses)
+	if err = json.Unmarshal(body, &licenses); err != nil {
+		// log.Println("GetLicenses/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
 
-func (p *LicenserProvider) BuyLicense(payment models.PaymentForLicense) (license models.License, err error) {
+func (p *LicenserProvider) BuyLicense(payment models.PaymentForLicense) (license models.LicenseFull, err error) {
 	body, err := doRequest(p.client, http.MethodPost, licensesURL, payment)
 	if err != nil {
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &license)
+	if err = json.Unmarshal(body, &license); err != nil {
+		// log.Println("BuyLicense/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
 
@@ -60,7 +68,11 @@ func (p *ExplorerProvider) Explore(area models.Area) (explored models.ExploredAr
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &explored)
+	if err = json.Unmarshal(body, &explored); err != nil {
+		// log.Println("Explore/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
 
@@ -70,7 +82,11 @@ func (p *EarnerProvider) Dig(params models.DigParams) (tl models.TreasuresList, 
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &tl)
+	if err = json.Unmarshal(body, &tl); err != nil {
+		// log.Println("Dig/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
 
@@ -80,6 +96,10 @@ func (p *ExchangerProvider) ExchangeTreasure(treasure models.Treasure) (pft mode
 		return
 	}
 
-	err = jsoniter.Unmarshal(body, &pft)
+	if err = json.Unmarshal(body, &pft); err != nil {
+		// log.Println("ExchangeTreasure/Unmarshal: ", err)
+		return
+	}
+
 	return
 }
