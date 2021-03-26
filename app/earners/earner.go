@@ -6,29 +6,31 @@ import (
 	"time"
 
 	"gold-rush/app/explorers"
+	"gold-rush/infrastructure"
 	"gold-rush/models"
 )
 
 const (
 	MaxDepth = 10
+
+	noSuchLicense = 403
+	noTreasure    = 404
+
+	wrongCoordinates = 1000
+	wrongDepth       = 1001
+)
+
+var (
+	startDurationTime = 100 * time.Millisecond
 )
 
 // point represents a unit of digging for worker
 type point struct {
 	X int
 	Y int
-	Z int
 }
 
-// type worker struct {
-// 	done   chan struct{}
-// 	result chan string
-// }
-
 type TreasuresEarner struct {
-	// workers   map[string]worker
-	// mx        sync.RWMutex
-	// done      chan struct{}
 	treasures chan []string
 	provider  provider
 	workers   int
@@ -55,23 +57,10 @@ func (t *TreasuresEarner) Treasures() <-chan []string {
 	return t.treasures
 }
 
-func (t *TreasuresEarner) IncreaseWorkers(count int) {
-
-}
-
-func (t *TreasuresEarner) ReduceWorkers(count int) {
-
-}
-
-func (t *TreasuresEarner) Stop() {
-
-}
-
 // 1. получает новый участок из очереди
 // 2. распределяет его между воркерами
 // 3. воркер, ответственный за копание в точке (x,y), копает все 10 уровней
 // 4. если все клады в области найдены, воркеры завершаются, мастер переходит к следующей области
-
 func (t *TreasuresEarner) run(areas queue, licenses <-chan int) {
 	for {
 		ea := areas.PopOrWait()
@@ -98,7 +87,6 @@ func (t *TreasuresEarner) run(areas queue, licenses <-chan int) {
 				go t.dig(done, wg, &mx, &earnedCount, licenses, point{
 					X: ea.Area.PosX + i,
 					Y: ea.Area.PosY + j,
-					Z: 0,
 				})
 			}
 		}
@@ -113,11 +101,10 @@ func (t *TreasuresEarner) run(areas queue, licenses <-chan int) {
 func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.Locker, counter *int, licenses <-chan int, p point) {
 	defer wg.Done()
 
-	for z := 0; z < 10; z++ {
+	for z := 1; z <= 10; {
 		license := <-licenses
-		p.Z = z + 1
+		retryDur := startDurationTime
 
-		retryDur := 100 * time.Millisecond
 		for {
 			select {
 			case <-done:
@@ -129,19 +116,91 @@ func (t *TreasuresEarner) dig(done <-chan struct{}, wg *sync.WaitGroup, mx sync.
 				LicenseID: license,
 				PosX:      p.X,
 				PosY:      p.Y,
-				Depth:     p.Z,
+				Depth:     z,
 			})
 			if err == nil {
 				t.treasures <- treasures
+				z++
 				mx.Lock()
 				*counter++
 				mx.Unlock()
 				break
 			}
 
-			<-time.After(retryDur)
-			log.Printf("[dig] dur: %v err: %v\n", retryDur, err)
-			retryDur *= 2
+			e, ok := err.(infrastructure.ProviderError)
+			if !ok {
+				// repeat request with same params
+				continue
+			}
+
+			if e.StatusCode >= 500 {
+				// repeat request with same params after increased timeout
+				log.Printf("[dig] dur: %v err: %v\n", retryDur, e)
+				<-time.After(retryDur)
+				retryDur *= 2
+				continue
+			}
+
+			if e.Code == noSuchLicense {
+				// repeat request with other license id
+				log.Printf("[dig]: license: %d err: %v\n", license, e)
+				break
+			}
+
+			if e.Code == noTreasure {
+				z++
+				break
+			}
+
+			log.Printf("[dig]: %v\n", e)
 		}
 	}
 }
+
+// 1. получает новый участок из очереди
+// 2. получает максимальное количество активных лицензий
+// 3. запускает n воркеров, каждому дается 10 возможностей копать, каждый копает свою точку
+// 4. если все клады в области найдены, берется следующий участок из очереди
+// func altRun(areas queue, workers int, licenses <-chan models.License) {
+// 	activeLicenses := 0
+// 	for {
+// 		area := areas.PopOrWait()
+// 		treasuresFound := 0
+// 		var mx sync.Mutex
+
+// 		for
+// 	}
+// }
+
+// func alt_run(areas queue, workers int, licenses <-chan models.License) {
+// 	for point := range pointGenerator(areas.PopOrWait()) {
+// 		dig(point, actions)
+// 	}
+// }
+
+// func actionGenerator(licenses <-chan int) (action [10]int, activeLicenses int) {
+// 	licMap := make(map[int]struct{})
+// 	for i := 0; i < len(action); i++ {
+// 		id := <-licenses
+// 		if _, ok := licMap[id]; !ok {
+// 			licMap[id] = struct{}{}
+// 		}
+// 	}
+// }
+
+// func pointGenerator(area models.ExploredArea) <-chan point {
+// 	points := make(chan point)
+// 	go func() {
+// 		defer close(points)
+// 		for i := 0; i < area.Area.SizeX; i++ {
+// 			for j := 0; j < area.Area.SizeY; j++ {
+// 				points <- point{
+// 					X: area.Area.PosX + i,
+// 					Y: area.Area.PosY + j,
+// 				}
+// 			}
+// 		}
+// 	}()
+
+// 	return points
+// }

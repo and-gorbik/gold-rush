@@ -45,19 +45,15 @@ func (a *AreaExplorer) Stop() {
 
 func (a *AreaExplorer) explore(workers int) *AreaQueue {
 
-	var posX, posY int
+	// var posX, posY int
 	points := make(chan Point, a.areasCount)
 
 	go func() {
 		defer close(points)
 
-		for i := 0; i < a.areasCount; i++ {
-			points <- Point{X: posX, Y: posY}
-
-			if posX >= MaxArea {
-				posX, posY = 0, posY+a.areaSize
-			} else {
-				posX = posX + a.areaSize
+		for i := 0; i < MaxArea/a.areaSize; i++ {
+			for j := 0; j < MaxArea/a.areaSize; j++ {
+				points <- Point{X: i * a.areaSize, Y: j * a.areaSize}
 			}
 		}
 	}()

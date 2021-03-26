@@ -33,6 +33,7 @@ func doRequest(client *http.Client, method, path string, input interface{}) ([]b
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("doRequest(%s)/Do: %v\n", path, err)
 		return nil, err
 	}
 
@@ -43,27 +44,27 @@ func doRequest(client *http.Client, method, path string, input interface{}) ([]b
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode >= http.StatusInternalServerError {
-			return nil, err
-		}
-
-		err = newBusinessError(body)
-		log.Printf("doRequest(%s): %v\n", path, err)
-		return nil, err
+		return nil, newProviderError(resp.StatusCode, body)
 	}
 
-	log.Println("BODY: ", string(body))
+	// log.Println("BODY: ", string(body))
 
 	return body, nil
 }
 
-func newBusinessError(body []byte) error {
-	var businessError infrastructure.BusinessError
-	if err := json.Unmarshal(body, &businessError); err != nil {
+func newProviderError(status int, body []byte) error {
+	var pe infrastructure.ProviderError
+	pe.StatusCode = status
+
+	if status >= http.StatusInternalServerError {
+		return pe
+	}
+
+	if err := json.Unmarshal(body, &pe); err != nil {
 		return err
 	}
 
-	return businessError
+	return pe
 }
 
 func readBody(r io.ReadCloser) ([]byte, error) {

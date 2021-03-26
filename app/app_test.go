@@ -18,8 +18,8 @@ func Test_Run_Success(t *testing.T) {
 	p := testmocks.GoodProvider{}
 
 	coins := make(chan int, TotalCoinsCount)
-	explorer := explorers.NewAreaExplorer(p, 70, 70)
-	licenser := licensers.NewLicenser(p, 50, coins)
+	explorer := explorers.NewAreaExplorer(p, 100, 70)
+	licenser := licensers.NewLicenser(p, 10, coins)
 	earner := earners.NewTreasuresEarner(p, 0, explorer.Queue(), licenser.Lincenses())
 	_ = exchangers.NewTreasuresExchanger(p, 0, earner.Treasures(), coins)
 

@@ -27,7 +27,6 @@ func (p *BalanceProvider) GetBalance() (balance models.Balance, err error) {
 	}
 
 	if err = json.Unmarshal(body, &balance); err != nil {
-		// log.Println("GetBalance/Unmarshal: ", err)
 		return
 	}
 
@@ -41,7 +40,6 @@ func (p *LicenserProvider) GetLicenses() (licenses []models.LicenseFull, err err
 	}
 
 	if err = json.Unmarshal(body, &licenses); err != nil {
-		// log.Println("GetLicenses/Unmarshal: ", err)
 		return
 	}
 
@@ -55,7 +53,6 @@ func (p *LicenserProvider) BuyLicense(payment models.PaymentForLicense) (license
 	}
 
 	if err = json.Unmarshal(body, &license); err != nil {
-		// log.Println("BuyLicense/Unmarshal: ", err)
 		return
 	}
 
@@ -69,7 +66,6 @@ func (p *ExplorerProvider) Explore(area models.Area) (explored models.ExploredAr
 	}
 
 	if err = json.Unmarshal(body, &explored); err != nil {
-		// log.Println("Explore/Unmarshal: ", err)
 		return
 	}
 
@@ -83,7 +79,6 @@ func (p *EarnerProvider) Dig(params models.DigParams) (tl models.TreasuresList, 
 	}
 
 	if err = json.Unmarshal(body, &tl); err != nil {
-		// log.Println("Dig/Unmarshal: ", err)
 		return
 	}
 
@@ -97,7 +92,6 @@ func (p *ExchangerProvider) ExchangeTreasure(treasure models.Treasure) (pft mode
 	}
 
 	if err = json.Unmarshal(body, &pft); err != nil {
-		// log.Println("ExchangeTreasure/Unmarshal: ", err)
 		return
 	}
 

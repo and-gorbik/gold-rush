@@ -1,40 +1,40 @@
 app:
-  area_size: 70
+  area_size: 100
 status_client:
   max_idle_conns: 100
   max_conns_per_host: 100
   max_idle_conns_per_host: 100
-  timeout: "3s"
+  timeout: "2s"
 balance_client:
   max_idle_conns: 100
   max_conns_per_host: 100
   max_idle_conns_per_host: 100
-  timeout: "3s"
+  timeout: "2s"
 explorer:
-  workers: 70
+  workers: 300
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "3s"
+    timeout: "2s"
 licenser:
-  workers: 50
+  workers: 300
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "3s"
+    timeout: "2s"
 earner:
   workers: 0
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "3s"
+    timeout: "2s"
 exchanger:
   workers: 0
   client:
     max_idle_conns: 100
     max_conns_per_host: 100
     max_idle_conns_per_host: 100
-    timeout: "3s"
+    timeout: "2s"

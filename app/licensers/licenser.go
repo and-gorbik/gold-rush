@@ -2,6 +2,7 @@ package licensers
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,8 +15,10 @@ const (
 )
 
 var (
-	getCoinTimeout = 1 * time.Millisecond
-	maxCapacity    = 100
+	getCoinTimeout    = 10 * time.Millisecond
+	maxCapacity       = 100
+	startDurationTime = 100 * time.Millisecond
+	chanLicensesSize  = 100000
 )
 
 type Licenser struct {
@@ -33,7 +36,7 @@ type Licenser struct {
 
 func NewLicenser(provider provider, workers int, coins <-chan int) *Licenser {
 	licenser := &Licenser{
-		licenses:             make(chan int, 100),
+		licenses:             make(chan int, chanLicensesSize),
 		licensesFromProvider: make(chan models.License, MaxActiveLicenses),
 		provider:             provider,
 		capacities:           make([]int, 0, maxCapacity),
@@ -94,30 +97,43 @@ func (l *Licenser) licenser(mx *sync.Mutex, coins <-chan int) {
 }
 
 func (l *Licenser) buyLicense(mx *sync.Mutex, payment []int) {
-	retryDur := 100 * time.Millisecond
+	retryDur := startDurationTime
 	for {
 		license, err := l.provider.BuyLicense(payment)
 		if err == nil {
-			// prices statistics
-			mx.Lock()
-			if !l.isCalculated {
-				l.capacities = append(l.capacities, license.DigAllowed)
+			if len(payment) != 0 {
+				mx.Lock()
+				log.Printf("bought license (bestPrice: %d paymentLen: %d)\n", l.bestPrice, len(payment))
+
+				// prices statistics
+				if !l.isCalculated {
+					l.capacities = append(l.capacities, license.DigAllowed)
+				}
+				mx.Unlock()
 			}
-			mx.Unlock()
 
 			l.licensesFromProvider <- license.License
 			return
 		}
 
-		// TODO: don't buy a license, when active licenses exists
-		if e, ok := err.(infrastructure.BusinessError); ok {
-			log.Printf("Code: %d Msg: %s\n", e.Code, e.Message)
-			<-time.After(time.Second)
+		e, ok := err.(infrastructure.ProviderError)
+		if !ok {
+			continue
 		}
 
-		<-time.After(retryDur)
-		log.Printf("[buyLicense] dur: %v err: %v\n", retryDur, err)
-		retryDur *= 2
+		if e.StatusCode >= 500 {
+			log.Printf("[buyLicense] dur: %v err: %v\n", retryDur, err)
+			<-time.After(retryDur)
+			retryDur *= 2
+			continue
+		}
+
+		// TODO: don't buy a license, when active licenses exists
+		if strings.Contains(e.Message, "no more active licenses allowed") {
+			<-time.After(3 * time.Second)
+		}
+
+		log.Printf("[buyLicense]: %v\n", e)
 	}
 }
 
@@ -164,16 +180,4 @@ func (l *Licenser) getPayment(mx *sync.Mutex, count int) []int {
 	l.payment = l.payment[:len(l.payment)-count]
 
 	return result
-}
-
-func (l *Licenser) IncreaseWorkers(count int) {
-
-}
-
-func (l *Licenser) ReduceWorkers(count int) {
-
-}
-
-func (l *Licenser) Stop() {
-
 }

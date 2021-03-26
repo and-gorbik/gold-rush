@@ -50,14 +50,3 @@ func (t *TreasuresExchanger) cash(treasure string, coins chan<- int) {
 		retryDur *= 2
 	}
 }
-
-func (t *TreasuresExchanger) IncreaseWorkers(count int) {
-}
-
-func (t *TreasuresExchanger) ReduceWorkers(count int) {
-
-}
-
-func (t *TreasuresExchanger) Stop() {
-
-}
