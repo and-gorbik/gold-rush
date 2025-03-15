@@ -4,23 +4,23 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
-	"go.uber.org/zap"
 )
 
 func (s *Server) IssueLicense(ctx context.Context, coins []int) License {
 	var license *License
 	var err error
 
-	s.retryWithExponentialBackoff(func() error {
+	s.retryWithExponentialBackoff("issueLicense", func() error {
 		license, err = s.issueLicense(ctx, coins)
 		return err
 	})
 
 	if err != nil {
-		s.log.Fatal("issue license failed unexpectedly", zap.Error(err))
+		log.Fatalf("issue license failed unexpectedly: %v", err)
 	}
 
 	return *license
@@ -30,13 +30,13 @@ func (s *Server) ExploreArea(ctx context.Context, area Area) ExploredArea {
 	var ea *ExploredArea
 	var err error
 
-	s.retryWithExponentialBackoff(func() error {
+	s.retryWithExponentialBackoff("exploreArea", func() error {
 		ea, err = s.exploreArea(ctx, area)
 		return err
 	})
 
 	if err != nil {
-		s.log.Fatal("explore area failed unexpectedly", zap.Error(err))
+		log.Fatalf("explore area failed unexpectedly: %v", err)
 	}
 
 	return *ea
@@ -46,13 +46,13 @@ func (s *Server) Dig(ctx context.Context, params DigParams) []string {
 	var treasures []string
 	var err error
 
-	s.retryWithExponentialBackoff(func() error {
+	s.retryWithExponentialBackoff("dig", func() error {
 		treasures, err = s.dig(ctx, params)
 		return err
 	})
 
 	if err != nil {
-		s.log.Fatal("dig failed unexpectedly", zap.Error(err))
+		log.Fatalf("dig failed unexpectedly: %v", err)
 	}
 
 	return treasures
@@ -62,13 +62,13 @@ func (s *Server) Cash(ctx context.Context, treasureID string) []int {
 	var coins []int
 	var err error
 
-	s.retryWithExponentialBackoff(func() error {
+	s.retryWithExponentialBackoff("cash", func() error {
 		coins, err = s.cash(ctx, treasureID)
 		return err
 	})
 
 	if err != nil {
-		s.log.Fatal("cash failed unexpectedly", zap.Error(err))
+		log.Fatalf("cash failed unexpectedly: %v", err)
 	}
 
 	return coins
@@ -80,7 +80,7 @@ func (s *Server) issueLicense(ctx context.Context, coins []int) (*License, error
 		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/licenses", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.addr+"/licenses", bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
@@ -104,7 +104,7 @@ func (s *Server) exploreArea(ctx context.Context, area Area) (*ExploredArea, err
 		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/explore", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.addr+"/explore", bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
@@ -128,7 +128,7 @@ func (s *Server) dig(ctx context.Context, params DigParams) ([]string, error) {
 		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/dig", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.addr+"/dig", bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
@@ -136,6 +136,10 @@ func (s *Server) dig(ctx context.Context, params DigParams) ([]string, error) {
 	data, err = s.processResponse(req)
 	if err != nil {
 		return nil, fmt.Errorf("process response: %w", err)
+	}
+
+	if data == nil {
+		return []string{}, nil
 	}
 
 	var treasures []string
@@ -152,7 +156,7 @@ func (s *Server) cash(ctx context.Context, treasureID string) ([]int, error) {
 		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/cash", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.addr+"/cash", bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}

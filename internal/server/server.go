@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
-	"go.uber.org/zap"
+	jsoniter "github.com/json-iterator/go"
 )
 
 const (
@@ -17,14 +18,20 @@ const (
 	maxConnsPerHost = 1000
 )
 
-type serverError error
-
-type Server struct {
-	client *http.Client
-	log    *zap.Logger
+type serverError struct {
+	err error
 }
 
-func Init(log *zap.Logger) *Server {
+func (se serverError) Error() string {
+	return se.err.Error()
+}
+
+type Server struct {
+	addr   string
+	client *http.Client
+}
+
+func Init(addr string) *Server {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxConnsPerHost = 0
 	t.MaxConnsPerHost = 0
@@ -35,21 +42,55 @@ func Init(log *zap.Logger) *Server {
 		Transport: t,
 	}
 
-	return &Server{client, log}
+	s := &Server{addr, client}
+
+	if err := s.healthcheck(); err != nil {
+		log.Fatalf("server: %v\n", err)
+	}
+
+	return s
 }
 
-func (*Server) retryWithExponentialBackoff(f func() error) {
+func (s *Server) healthcheck() error {
+	req, err := http.NewRequest(http.MethodGet, s.addr+"/health-check", nil)
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client do: %w", err)
+	}
+
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (*Server) retryWithExponentialBackoff(name string, f func() error) {
 	b := newExponentialBackoff()
-	var serr *serverError
+	var serr serverError
 
 	for {
 		err := f()
 		if err == nil || !errors.As(err, &serr) {
+			// don't retry
 			return
 		}
 
-		<-time.After(b.NextBackOff())
+		dur := b.NextBackOff()
+		log.Printf("%s: %v; it will be retried after %v\n", err, name, dur)
+		<-time.After(dur)
 	}
+}
+
+type errorDetail struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 func (s *Server) processResponse(req *http.Request) ([]byte, error) {
@@ -61,7 +102,7 @@ func (s *Server) processResponse(req *http.Request) ([]byte, error) {
 	if err != nil {
 		if uerr, ok := err.(*url.Error); ok {
 			if uerr.Temporary() || uerr.Timeout() {
-				return nil, serverError(fmt.Errorf("do: %w", err))
+				return nil, serverError{fmt.Errorf("do: %w", err)}
 			}
 		}
 
@@ -75,12 +116,22 @@ func (s *Server) processResponse(req *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("readall: %w", err)
 	}
 
-	if resp.StatusCode >= http.StatusInternalServerError {
-		return nil, serverError(fmt.Errorf("status code: %d", resp.StatusCode))
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode >= http.StatusInternalServerError ||
+		resp.StatusCode == http.StatusTooManyRequests {
+		return nil, serverError{fmt.Errorf("status code: %d", resp.StatusCode)}
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		var errDetail errorDetail
+		if err := jsoniter.Unmarshal(data, &errDetail); err != nil {
+			return nil, fmt.Errorf("unmarshal err detail: %w", err)
+		}
+
+		return nil, fmt.Errorf("unexpected status code: %d, details: %s", resp.StatusCode, errDetail.Message)
 	}
 
 	return data, nil
