@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	handlers := server.Init("http://localhost:8000")
+	handlers := server.Init("http://localhost:8000", 0)
 
 	license := handlers.IssueLicense(context.Background(), []int{})
 	log.Println("got license, attempts: ", license.DigAllowed)

@@ -4,11 +4,32 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
 )
+
+func (s *Server) Healthcheck() error {
+	req, err := http.NewRequest(http.MethodGet, s.addr+"/health-check", nil)
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("client do: %w", err)
+	}
+
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
 
 func (s *Server) IssueLicense(ctx context.Context, coins []int) License {
 	var license *License

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -11,16 +10,17 @@ import (
 )
 
 const (
-	licensesCheckDuration = time.Millisecond * 100
-	licenseIssuePeriod    = time.Millisecond * 100
-	maxActiveLicenses     = 10
-	maxBuf                = 100
+	maxActiveLicenses = 10
+
+	defaultTryIssueLicensePeriod = time.Millisecond * 100
+	defaultMaxLicencesBuf        = 100
 )
 
 type LicenseService struct {
 	server   handlers
 	attempts map[string]int
 	mx       sync.Mutex
+	opts     LicenserOpts
 }
 
 type license struct {
@@ -34,27 +34,51 @@ type License struct {
 	ID      int
 }
 
-func NewLicenceService(server handlers) *LicenseService {
+type LicenserOpts struct {
+	TryIssueLicensePeriod time.Duration
+	MaxLicencesBuf        int
+}
+
+func (lo *LicenserOpts) SetDefaultsIfNeeded() {
+	if lo.MaxLicencesBuf == 0 {
+		lo.MaxLicencesBuf = defaultMaxLicencesBuf
+	}
+
+	if lo.TryIssueLicensePeriod == 0 {
+		lo.TryIssueLicensePeriod = defaultTryIssueLicensePeriod
+	}
+}
+
+func NewLicenceService(server handlers, opts LicenserOpts) *LicenseService {
+	opts.SetDefaultsIfNeeded()
+
 	ls := &LicenseService{
 		attempts: make(map[string]int, maxActiveLicenses),
 		server:   server,
+		opts:     opts,
 	}
 
-	ls.checkActualLicenses(licensesCheckDuration)
+	// ls.checkActualLicenses(licensesCheckPeriod)
 	return ls
 }
 
-func (ls *LicenseService) StreamLicenses() <-chan License {
+func (ls *LicenseService) StreamLicenses(ctx context.Context) <-chan License {
 	licenses := make(chan license, maxActiveLicenses-1)
-	licenseIDs := make(chan License, maxBuf)
+	licenseIDs := make(chan License, ls.opts.MaxLicencesBuf)
 
 	go func() {
 		defer close(licenses)
 
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
 			li := ls.issueLicense()
 			if li == nil {
-				<-time.After(licenseIssuePeriod)
+				<-time.After(ls.opts.TryIssueLicensePeriod)
 				continue
 			}
 
@@ -118,18 +142,18 @@ func (ls *LicenseService) issueLicense() *license {
 	return &license{trackID, l.ID, l.DigAllowed}
 }
 
-func (ls *LicenseService) checkActualLicenses(dur time.Duration) {
-	go func() {
-		for {
-			ls.mx.Lock()
-			cur := len(ls.attempts)
-			ls.mx.Unlock()
+// func (ls *LicenseService) checkActualLicenses(dur time.Duration) {
+// 	go func() {
+// 		for {
+// 			ls.mx.Lock()
+// 			cur := len(ls.attempts)
+// 			ls.mx.Unlock()
 
-			if cur < 0 || cur > maxActiveLicenses {
-				log.Fatal(fmt.Sprintf("inexpected number of active licenses: %d", cur))
-			}
+// 			if cur < 0 || cur > maxActiveLicenses {
+// 				log.Fatal(fmt.Sprintf("inexpected number of active licenses: %d", cur))
+// 			}
 
-			<-time.After(dur)
-		}
-	}()
-}
+// 			<-time.After(dur)
+// 		}
+// 	}()
+// }

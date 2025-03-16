@@ -11,6 +11,12 @@ import (
 const (
 	explorers = 10
 	cashiers  = 10
+
+	bufPoints    = 100
+	bufLicenses  = 100
+	bufTreasures = 1000
+
+	periodTryIssueLicense = 100 * time.Millisecond
 )
 
 type handlers interface {
@@ -20,20 +26,29 @@ type handlers interface {
 	Cash(ctx context.Context, treasureID string) (coins []int)
 }
 
-func Run(h handlers) {
-	points := NewExplorerService(h).ExplorePoints(explorers)
+func Run(ctx context.Context, h handlers) {
+	points := NewExplorerService(h, bufPoints).ExplorePoints(ctx, explorers)
 
-	ls := NewLicenceService(h)
-	licenses := ls.StreamLicenses()
+	ls := NewLicenceService(h, LicenserOpts{
+		TryIssueLicensePeriod: periodTryIssueLicense,
+		MaxLicencesBuf:        bufLicenses,
+	})
+	licenses := ls.StreamLicenses(ctx)
 
 	ds := NewDiggerService(h, ls)
-	treasures := ds.DigTreasures(points, licenses)
+	treasures := ds.DigTreasures(ctx, points, licenses, bufTreasures)
 
 	cs := NewCashierService(h)
-	cs.ExchangeForCash(cashiers, treasures)
+	cs.ExchangeForCash(ctx, cashiers, treasures)
 
 	for {
 		log.Println("Total coins: ", cs.TotalCoins())
-		<-time.After(time.Second)
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			// instead of graceful shutdown
+			<-time.After(time.Second * 3)
+			return
+		}
 	}
 }

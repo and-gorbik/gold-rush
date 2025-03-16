@@ -24,7 +24,7 @@ func (cs *CashierService) TotalCoins() int {
 	return int(cs.total.Load())
 }
 
-func (cs *CashierService) ExchangeForCash(workers int, treasures <-chan string) {
+func (cs *CashierService) ExchangeForCash(ctx context.Context, workers int, treasures <-chan string) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < workers; i++ {
@@ -33,6 +33,12 @@ func (cs *CashierService) ExchangeForCash(workers int, treasures <-chan string) 
 			defer wg.Done()
 
 			for t := range treasures {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				// save them for buying licenses further
 				coins := cs.cash(t)
 				cs.total.Add(int32(len(coins)))

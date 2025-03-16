@@ -31,44 +31,28 @@ type Server struct {
 	client *http.Client
 }
 
-func Init(addr string) *Server {
+func Init(addr string, timeout time.Duration) *Server {
+	if timeout == 0 {
+		timeout = defaultTimeout
+	}
+
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxConnsPerHost = 0
 	t.MaxConnsPerHost = 0
 	t.MaxIdleConnsPerHost = maxConnsPerHost
 
 	client := &http.Client{
-		Timeout:   defaultTimeout,
+		Timeout:   timeout,
 		Transport: t,
 	}
 
 	s := &Server{addr, client}
 
-	if err := s.healthcheck(); err != nil {
+	if err := s.Healthcheck(); err != nil {
 		log.Fatalf("server: %v\n", err)
 	}
 
 	return s
-}
-
-func (s *Server) healthcheck() error {
-	req, err := http.NewRequest(http.MethodGet, s.addr+"/health-check", nil)
-	if err != nil {
-		return fmt.Errorf("new request: %w", err)
-	}
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("client do: %w", err)
-	}
-
-	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("invalid status code: %d", resp.StatusCode)
-	}
-
-	return nil
 }
 
 func (*Server) retryWithExponentialBackoff(name string, f func() error) {
